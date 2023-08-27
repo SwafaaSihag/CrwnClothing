@@ -69,14 +69,15 @@ const firebaseConfig = {
     return querySnapshot.docs.map(docSnapshot => docSnapshot.data());
   };
 
-  export const createUserDocumentFromAuth = async (userAuth) => {
+  export const createUserDocumentFromAuth = async (
+    userAuth, 
+    additionalInformation = {}
+    ) => {
+      if (!userAuth) return;
+
     const userDocRef = doc(db, 'users', userAuth.uid);
 
-    console.log(userDocRef);
-
     const userSnapshot = await getDoc(userDocRef);
-    console.log(userSnapshot);
-    console.log(userSnapshot.exists());
 
     if(!userSnapshot.exit()) {
         const { displayName, email } = userAuth;
@@ -86,14 +87,15 @@ const firebaseConfig = {
             await setDoc(userDocRef, {
                 displayName,
                 email,
-                createdAt
+                createdAt,
+                ...additionalInformation,
             });
         } catch (error) {
             console.log('error creating the user', error.message);
         }
       }
 
-      return userDocRef;
+      return userSnapshot;
   };
 
   export const createAuthUserWithEmailAndPassword = async (email, password) => {
@@ -112,4 +114,17 @@ const firebaseConfig = {
 
   export const onAuthStateChangedListener = (callback) => onAuthStateChanged(auth, callback);
 
+  //we are converting an observable listener(which was in app.js), into a promise based function call.
+  export const getCurrentUser = () => {
+     return new Promise((resolve, reject) => {
+      const unSubscribe = onAuthStateChanged(
+        auth,
+        (userAuth) => {
+          unSubscribe();
+          resolve(userAuth);
+        },
+        reject
+      )
+     })
+  }
 
